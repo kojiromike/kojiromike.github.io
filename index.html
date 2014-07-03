@@ -32,11 +32,23 @@
 
 <p>There's this idea that TDD is dead, and it's neither right nor entirely wrong. TDD sprang up as part of the Extreme Programming idea. As with most forms of extremism, it takes a good idea too far. But as an experiment, it is excellent, educational, and a powerful idea: <em>Let's discover all the things that improve a programming practice and do them to death. Tested software is better, so let's test everything. We'll guarantee that everything is tested by insisting that the developers write the tests before writing the code under test. We'll call it Test-Driven Development!</em></p>
 
-<p>I'm not even sure that's wrong. What would be truly extreme would be to insist that the aforementioned tests all be <em>unit</em> tests. The problem with unit tests is that they assume everything is an interface. If all you write is APIs with no concrete or even reference implementations, unit tests are easy. Ideally, everything should have a clear and well-defined interface, but there are too many places where that's impractical. Yet instead of defining the interfaces themselves, we unit test against de facto interfaces using mocks and stubs. As a result, we end up creating more work for developers and increase the rigidity of tests to provide some of the constraints of static typing with none of the benefits.</p>
+<h2>
+<a name="whats-wrong-with-unit-tests" class="anchor" href="#whats-wrong-with-unit-tests"><span class="octicon octicon-link"></span></a>What's wrong with unit tests?</h2>
+
+<p>I'm not even sure the test-first idea is wrong. What would be truly extreme would be to insist that the aforementioned tests all be <em>unit</em> tests. The problem with unit tests is that they assume everything is an interface. If all you write is APIs with no concrete or even reference implementations, unit tests are easy. Ideally, everything should have a clear and well-defined interface, but there are too many places where that's impractical. Yet instead of defining the interfaces themselves, we unit test against de facto interfaces using mocks and stubs. As a result, we end up creating more work for developers and increase the rigidity of tests to provide some of the constraints of static typing with none of the benefits.</p>
+
+<h3>
+<a name="whats-wrong-with-mocks" class="anchor" href="#whats-wrong-with-mocks"><span class="octicon octicon-link"></span></a>What's wrong with mocks?</h3>
 
 <p><em>What about testing that my code invokes certain methods of a dependency?</em> You want to test that your code does what you are about to tell it to do? Are you allowed to change your mind? There's something really broken about this idea. I've seen developers write entire clones of the behavior of a method only to write that same method. There may be situations where lots of mocking is useful, but I haven't found any outstanding examples.</p>
 
+<h2>
+<a name="lay-off-the-extremism-fewer-mocks-more-integration-tests" class="anchor" href="#lay-off-the-extremism-fewer-mocks-more-integration-tests"><span class="octicon octicon-link"></span></a>Lay off the extremism: fewer mocks, more integration tests</h2>
+
 <p>Without excessive mocks, and without just fooling the coverage tool outright, can we achieve 100% unit test coverage? I think probably not. I want to back off this fundamentalism a little bit: Drop the requirement to have 100% unit test coverage and just require that all our code is automatically tested. We'll use interfaces where we can and fixtures and stubs to fill in missing data and slow dependencies. Maybe we'll even use a mock to check for an easily-forgotten operation such as file handle cleanup. And we'll even encourage developers to write tests first, (not-unit-tested code is always the first place I look during code review) but we won't force the issue. Rather, we'll also encourage integration testing, because sometimes the integration test is an easier-to-write and more effective test than a forced unit test.</p>
+
+<h2>
+<a name="naming-things-is-hard" class="anchor" href="#naming-things-is-hard"><span class="octicon octicon-link"></span></a>Naming things is hard</h2>
 
 <p>But I still want to call this <em>Test Driven Development</em> because I think we need to use terms like this pragmatically and to the general advantage of the industry – an industry that still hasn't entirely wrapped its head around automated testing. The idea should evolve as we learn from it, and different teams should be allowed to do their own adaptation of TDD that suits their needs, environments, context and goals. The important thing is that testing (and test automation) must be done early and often, and be a core part of development practice.</p>
       </section>
