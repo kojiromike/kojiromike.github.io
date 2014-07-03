@@ -1,0 +1,20 @@
+#!/bin/sh
+
+date="$(date +'%Y-%m-%dT%H:%M:%S%Z')"
+file="post-${date}.html"
+
+cat > "$file" <<-HTML
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="description" content="Michael A. Smith's Blog">
+		<meta name="keywords" content="Software,Programming,Magento,PHP">
+		<meta name="author" content="Michael A. Smith : michael at smith dash li dot com">
+		<title>Smith's Opinion as of $(echo $(date '+%A, %B %e, %Y at %H:%M:%S %Z'))</title>
+	</head>
+	<body>
+	</body>
+</html>
+HTML
+
