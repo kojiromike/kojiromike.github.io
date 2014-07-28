@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+		<title>Ways to Maintain Ordering of Event Observers in Magento 1</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+				<h1>Ways to Maintain Ordering of Event Observers in Magento 1</h1>
+				<p>Michael A. Smith&#39;s opinion on something about Magento event observer ordering (with a handful of facts thrown in)</p>
+
+        <p class="view"><a href="https://github.com/kojiromike">View My GitHub Profile</a></p>
+
+			</header>
+			<section>
+				<h1>
+					<a name="introduction" class="anchor" href="#introduction"><span class="octicon octicon-link"></span></a>Introduction
+				</h1>
+				<p>Suppose you want to inject some additional code after Magento saves the order, and it depends on <code>Mage_Tax_Model_Observer::salesEventOrderAfterSave</code>. Magento core already observes the "sales_order_save_after" event with that method:</p>
+				<pre><code>
+					<config><global><events>
+						<sales_order_save_after>
+							<observers>
+								<tax>
+									<class>tax/observer</class>
+									<method>salesEventOrderAfterSave</method>
+								</tax>
+							</observers>
+						</sales_order_save_after>
+					</events></global></config>
+				</code></pre>
+				<p>And event handler ordering is not specified, so how can we be sure our code immediately follows it?</p>
+
+				<h2>
+					<a name="rewrite-and-inherit" class="anchor" href="#rewrite-and-inherit"><span class="octicon octicon-link"></span></a>Rewrite and Inherit (not recommended)
+				</h2>
+				<p>The most obvious way to guarantee that an event is handled in the order you desire is to rewrite the existing class and override its observer:</p>
+				<pre><code>
+					<config><global><models><tax><rewrite>
+						<observer>My_Module_Model_Observer</observer>
+					</rewrite></models></tax></global></config>
+				</code></pre>
+				<p>Here, we don't actually have to register the event observer because the one Magento has already registered will call our method. We just need to make sure our method actually invokes its parent</p>
+				<pre><code>
+					class My_Module_Model_Observer extends Mage_Tax_Model_Observer
+					{
+						public function salesEventOrderAfterSave(Varien_Event_Observer $observer)
+						{
+							parent::salesEventOrderAfterSave($observer);
+							// my code
+						}
+					}
+				</code></pre>
+				<p>But any time you rewrite a class in Magento you endanger upgradability and extensibility. Let's find a way that doesn't.</p>
+				<h2>
+					<a name="compose-and-invoke" class="anchor" href="#compose-and-invoke"><span class="octicon octicon-link"></span></a>Compose and Invoke
+				</h2>
+				<p>We can simply choose not to inherit from the other observer. In this case we have to register our observer directly:</p>
+				<pre><code>
+					<config><global><events>
+						<sales_order_save_after>
+							<observers>
+								<my_module>
+									<class>my/observer</class>
+									<method>salesOrderSaveAfter</method>
+								</my_module>
+							</observers>
+						</sales_order_save_after>
+					</events></global></config>
+				</code></pre>
+				<p>By itself, this doesn't guarantee anything about the order the observers will apply. To do that, we'll directly apply the observer we want to come first, and deactivate it so it doesn't happen on its own.</p>
+				<pre><code>
+					class My_Module_Model_Observer
+					{
+						public function salesEventOrderAfterSave(Varien_Event_Observer $observer)
+						{
+							Mage::getModel('tax/observer')->salesEventOrderAfterSave($observer);
+							// my code
+						}
+					}
+				</code></pre>
+				<p>and</p>
+				<pre><code>
+					<config><global><events>
+						<sales_order_save_after>
+							<observers>
+								<tax>
+									<type>disabled</type>
+								</tax>
+							</observers>
+						</sales_order_save_after>
+					</events></global></config>
+				</code></pre>
+
+<h3>
+<a name="whats-wrong-with-mocks" class="anchor" href="#whats-wrong-with-mocks"><span class="octicon octicon-link"></span></a>What's wrong with mocks?</h3>
+
+<p><em>What about testing that my code invokes certain methods of a dependency?</em> You want to test that your code does what you are about to tell it to do? Are you allowed to change your mind? There's something really broken about this idea. I've seen developers write entire clones of the behavior of a method only to write that same method. There may be situations where lots of mocking is useful, but I haven't found any outstanding examples.</p>
+
+<h2>
+<a name="lay-off-the-extremism-fewer-mocks-more-integration-tests" class="anchor" href="#lay-off-the-extremism-fewer-mocks-more-integration-tests"><span class="octicon octicon-link"></span></a>Lay off the extremism: fewer mocks, more integration tests</h2>
+
+<p>Without excessive mocks, and without just fooling the coverage tool outright, can we achieve 100% unit test coverage? I think probably not. I want to back off this fundamentalism a little bit: Drop the requirement to have 100% unit test coverage and just require that all our code is automatically tested. We'll use interfaces where we can and fixtures and stubs to fill in missing data and slow dependencies. Maybe we'll even use a mock to check for an easily-forgotten operation such as file handle cleanup. And we'll even encourage developers to write tests first, (not-unit-tested code is always the first place I look during code review) but we won't force the issue. Rather, we'll also encourage integration testing, because sometimes the integration test is an easier-to-write and more effective test than a forced unit test.</p>
+
+<h2>
+<a name="naming-things-is-hard" class="anchor" href="#naming-things-is-hard"><span class="octicon octicon-link"></span></a>Naming things is hard</h2>
+
+<p>But I still want to call this <em>Test Driven Development</em> because I think we need to use terms like this pragmatically and to the general advantage of the industry – an industry that still hasn't entirely wrapped its head around automated testing. The idea should evolve as we learn from it, and different teams should be allowed to do their own adaptation of TDD that suits their constraints and goals. Nobody should say, "that's not TDD because some of these tests aren't unit tests," or "that's not TDD because she only wrote some of those tests first." The important thing is that testing (and test automation) must be done early and often, and be a core part of development practice.</p>
+      </section>
+      <footer>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
